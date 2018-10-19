@@ -14,7 +14,7 @@ The bot uses the Google Safe Browsing API v4 to check how safe websites are.
 
 * (info: https://developers.google.com/safe-browsing/)
 
-You can call the bot with the command 
+You can call the bot with the command:
 
 `!Facecheck <insert url>`
 
