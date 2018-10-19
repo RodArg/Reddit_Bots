@@ -1,8 +1,7 @@
 import praw
 import importlib
-from Bot_Template import keys
-
-importlib.import_module("keys.py")
+#replace PATH with the folder where your keys.py file is found
+from PATH import keys
 
 #Text that will trigger your bot
 trigger = "I am testing my bot! Don't mind me."
