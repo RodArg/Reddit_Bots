@@ -1,10 +1,10 @@
-** Requirements:
+## Requirements:
 
 Do a pip install of the following library:
 pip install requests
 *(info: http://docs.python-requests.org)
 
-**What This Bot Does:
+## What This Bot Does:
 
 Hello, WebSafetyBot is a neat Reddit bot that can make sure the links you find while browsing
 on Reddit are clean. 
