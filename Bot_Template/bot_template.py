@@ -5,18 +5,18 @@ from Bot_Template import keys
 importlib.import_module("keys.py")
 
 #Text that will trigger your bot
-trigger = "taskete~"
+trigger = "I am testing my bot! Don't mind me."
 #Message your bot will post
 message = "I am here!"
-#If you'll post a link with your message, url is true
-url = True
-link = "https://gfycat.com/gifs/detail/eagerfrighteningeel"
+#If you'll post a link with your message, hyperlink is true
+hyperlink = True
+url = "<url you want your bot to post>"
 
 #Reddit authentication
 reddit = praw.Reddit(client_id = keys.client_id,
                      client_secret = keys.client_secret,
                      password = keys.password,
-                     user_agent = "Test Script by /u/Habanero_Pepper_irl",
+                     user_agent = "Test Script by /u/Your Reddit Username",
                      username = keys.username)
 
 #Set the subreddit you want to go through
@@ -36,7 +36,7 @@ for id in submission_ids:
         text = str(comment.body)
             #print(text) #in case you want to print out the comments
         if(text.lower() == trigger):
-            if(url):
-                comment.reply("[" + message + "](" + link + ")")
+            if(hyperlink):
+                comment.reply("[" + message + "](" + url + ")")
             else:
                 comment.reply(message)
