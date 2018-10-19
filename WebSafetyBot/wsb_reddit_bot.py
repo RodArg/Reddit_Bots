@@ -1,5 +1,5 @@
-from WebsiteSafetyBot import keys
-from WebsiteSafetyBot.gglsb_lookup import checkWebsite
+from WebSafetyBot import keys
+from WebSafetyBot.gglsb_lookup import checkWebsite
 import praw
 
 #Message that will trigger the bot

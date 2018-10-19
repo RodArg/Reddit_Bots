@@ -1,4 +1,4 @@
-from WebsiteSafetyBot import keys
+from WebSafetyBot import keys
 import requests
 def checkWebsite(website):
     # Dict with potential http status
