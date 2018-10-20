@@ -1,10 +1,12 @@
 from WebSafetyBot import keys
 from WebSafetyBot.gglsb_lookup import checkWebsite
 import praw
+import re
 
+findall_url = "https?://(?:[-\w.]|(?:%[\da-fA-F]{2}))+"
 #Message that will trigger the bot
 trigger = "!facecheck"
-
+message = ""
 #If you'll post a link with your message, url is true
 adding_gif = False
 gifs = {
@@ -43,26 +45,35 @@ for submission in subreddit.hot(limit = 1):
 #Go through each submission
 for id in submission_ids:
     submission = reddit.submission(id)
-    comments = submission.comments
+    comments = submission.comments.list()
 
     #Go through the comments of each submission
     for comment in comments:
         text = str(comment.body)
-            #print(text) #in case you want to print out the comments
+        #print("Text:", text) #in case you want to print out the comments
         if(trigger in text.lower()):
-            ##This has to be changed to find the url within the comment text itself
-            text = text.split("!Facecheck")
-            #print(text)
-            text = text[1]
-            response = checkWebsite(text)
-            status_code = response[0]
-            threat = response[1]
+            parent_txt = comment.parent()
+            parent_txt = reddit.comment(id = parent_txt)
+            parent_txt = str(parent_txt.body)
 
-            message = threatResponse[threat]
+            #Regex to find all urls within parent text body
+            #credit: GooDeeJaY answering at stackoverflow
+            urls = re.findall('(?:(?:https?|ftp):\/\/)?[\w/\-?=%.]+\.[\w/\-?=%.]+', parent_txt)
 
-            if(threat == "ERROR"):
-                message = "ERROR: " + status_code + message
-            else:
-                #Formats reply to make the url a hyperlink
-                message = "[" + message + "](" + gifs[threat] + ")"
-            comment.reply(message)
+            # print("urls:",urls)
+            # print("parent_txt:",parent_txt)
+            #For each url, check their safety
+            for url in urls:
+                response = wsb_ggsb_lookup.checkWebsite(url)
+                status_code = response[0]
+                threat = response[1]
+                body = threatResponse[threat]
+                if(threat == "ERROR"):
+                    body = "ERROR: " + status_code + body
+                else:
+                    #Formats reply to make the url a hyperlink
+                    body = url + ": " + "[" + body + "](" + gifs[threat] + ")"
+                message += body + "\n \n"
+            if(message != ""):
+                #print(message)
+                comment.reply(message)
