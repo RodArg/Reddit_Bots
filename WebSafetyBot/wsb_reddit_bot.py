@@ -2,13 +2,19 @@ from WebSafetyBot import keys
 from WebSafetyBot.gglsb_lookup import checkWebsite
 import praw
 import re
+import datetime
+##TO DO:
+    # set subreddits bot will go through
+    # make sure bot only comments once per comment in thread
 
-findall_url = "https?://(?:[-\w.]|(?:%[\da-fA-F]{2}))+"
+regex_url = '(?:(?:https?|ftp):\/\/)?[\w/\-?=%.]+\.[\w/\-?=%.]+'
 #Message that will trigger the bot
 trigger = "!facecheck"
 message = ""
-#If you'll post a link with your message, url is true
-adding_gif = False
+#Reddit formatting for tables
+head = "URL|Result \n :--|:-- \n"
+#User signature bot will always show
+signature = "\n" + "---" + "\n \n" + "^(I am a bot created by /u/Habanero_Pepper_irl, let him know if anything goes wrong.)"
 gifs = {
     #Thumbs up gif
     "SAFE": "https://i.imgur.com/LT4GuFu.gif",
@@ -50,30 +56,37 @@ for id in submission_ids:
     #Go through the comments of each submission
     for comment in comments:
         text = str(comment.body)
-        #print("Text:", text) #in case you want to print out the comments
+        print("Comment:", text) #Print out comments for debugging
         if(trigger in text.lower()):
+            #Get the comment parent id
+            #Get the parent comment item
+            #Get the parent comment body
             parent_txt = comment.parent()
             parent_txt = reddit.comment(id = parent_txt)
             parent_txt = str(parent_txt.body)
-
             #Regex to find all urls within parent text body
-            #credit: GooDeeJaY answering at stackoverflow
-            urls = re.findall('(?:(?:https?|ftp):\/\/)?[\w/\-?=%.]+\.[\w/\-?=%.]+', parent_txt)
+                #credit: GooDeeJaY answering at stackoverflow
+            urls = re.findall(regex_url, parent_txt)
 
-            # print("urls:",urls)
-            # print("parent_txt:",parent_txt)
             #For each url, check their safety
             for url in urls:
+                print("I'm running")
                 response = wsb_ggsb_lookup.checkWebsite(url)
                 status_code = response[0]
                 threat = response[1]
                 body = threatResponse[threat]
                 if(threat == "ERROR"):
                     body = "ERROR: " + status_code + body
+                    file = open("wsb_logs.txt", "r")
+                    file.write("Date: " + datetime.date.now() + "|URL: " + url + "|Body: " + body)
                 else:
                     #Formats reply to make the url a hyperlink
-                    body = url + ": " + "[" + body + "](" + gifs[threat] + ")"
-                message += body + "\n \n"
+                    body = url + "|" + "[" + body + "](" + gifs[threat] + ")"
+                message += body + "\n"
+            #print("Message:",message)
             if(message != ""):
-                #print(message)
+                #Build the message as a table and add a signature
+                message = head + message + signature
+                # print("Message")
+                # print(message)
                 comment.reply(message)
