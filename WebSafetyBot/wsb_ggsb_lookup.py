@@ -1,4 +1,4 @@
-from WebSafetyBot import keys
+import keys
 import requests
 def checkWebsite(website):
     # Dict with potential http status
@@ -15,7 +15,9 @@ def checkWebsite(website):
     url = "https://safebrowsing.googleapis.com/v4/threatMatches:find"
     # Build payload to match Google SafeBrowsing formatting
     payload = {'client': {'clientId': "websafetybot", 'clientVersion': "0.0.1"},
-               'threatInfo': {'threatTypes': ["SOCIAL_ENGINEERING", "MALWARE"],
+               'threatInfo': {'threatTypes': ["MALWARE","SOCIAL_ENGINEERING",
+                                              "THREAT_TYPE_UNSPECIFIED", "UNWANTED_SOFTWARE",
+                                              "POTENTIALLY_HARMFUL_APPLICATION"],
                               'platformTypes': ["ANY_PLATFORM"],
                               'threatEntryTypes': ["URL"],
                               'threatEntries': [{'url': website}]}}
@@ -54,6 +56,7 @@ def checkWebsite(website):
         #         "cacheDuration": "300.000s"
         #     }]
         # }
+        #Get matches from json, [0] is first list, ["threatType"] gets threatType dict
         r_threatType = r.json()["matches"][0]["threatType"]
         return (http_status[status_code], r_threatType)
     return (http_status[status_code], "SAFE")
