@@ -5,17 +5,17 @@ import praw
 import re
 import time
 
+##To Do:
+    #Make it so user chooses whether bot checks all comments on all of reddit or only does so in certain subreddits
 LOG_FILE = "wsb_logs.txt"
-REPLIED_TO_FILE = "wsb_ids.txt"
+RESPONDED_TO_FILE = "wsb_ids.txt"
 SUBREDDITS_FILE = "wsb_subreddits.txt"
 
 #Regex to find all urls within parent text body #credit: GooDeeJaY answering at stackoverflow
 REGEX_URL = '(?:(?:https?|ftp):\/\/)?[\w/\-?=%.]+\.[\w/\-?=%.]+'
-SUB_AMT = 6 #Number of submissions to go through
 
 trigger = "!facecheck"
 
-#Message components
 head = "URL|Result (GIFs) \n :--|:-- \n" #Reddit formatting for tables
 signature = "\n" + "---" + "\n \n" + "^(I am a bot created by /u/Habanero_Pepper_irl, let him know if anything goes wrong.)"
 gifs = {
@@ -51,65 +51,59 @@ reddit = praw.Reddit(client_id = keys.client_id,
                      username = keys.username)
 
 subreddits = rf.getSubredditsFromFile(SUBREDDITS_FILE) #will be a list
-submission_ids = rf.getSubmissions(reddit, subreddits, SUB_AMT) #will be a list
 
-def botAction(id):
-    if(id == False):
-        return
-    message = ""
-    comment = reddit.comment(id=id)
-    print("comment:", comment.body)
-    parent = reddit.comment(id=comment.parent())
-    parent_txt = str(parent.body)
-    urls = re.findall(REGEX_URL, parent_txt)
+def checkURLSafety(urls):
+    responses = []
     for url in urls:
         response = wsb_ggsb_lookup.checkWebsite(url)
         status_code = response[0]
         threat = response[1]
-        body = threatResponse[threat]
+        url = rf.unlinkURL(url)  # Makes any url not a link
         if (threat == "ERROR"):
-            return (status_code + body, url)
-        else:
-            # Formats reply to make the url a hyperlink
-            url = rf.unlinkURL(url)
-            #print("Proper url:", url)
-            body = url + "|" + rf.buildHyperlink(body, gifs[threat])
-        message += body + "\n"
-    if (message != ""):
-        message = head + message + signature
-        print("Printing Message:",message)
-        comment.reply(message)
-        time.sleep(2)
-    return False
+            print(status_code + threatResponse[threat], url)
+        responses.append([url, threat])
+    return responses
 
-def runBot():
-    running = True
+def buildReply(responses):
+    reply = ""
+    for response in responses:
+        url = response[0]
+        threat = response[1]
+        reply += url + "|" + rf.buildHyperlink(threatResponse[threat], gifs[threat]) + "\n"
+    return reply
+
+def searchComments(comments):
     id_buffer = ""
     err_buffer = ""
-    while(running):
+    count = 0
+    while(True):
         try:
-            print("1")
-            replied_to_ids = rf.getRepliedToIDs(REPLIED_TO_FILE)
-            print("2")
-            comments = rf.findCommentID(reddit, submission_ids, trigger)
-            print("3")
+            print("Executing WSB")
+            reply = ""
+            responded_to_ids = rf.getRepliedToIDs(RESPONDED_TO_FILE)
             for comment in comments:
-                parent = comment.parent()
-                if(rf.haveRepliedTo(parent, replied_to_ids)):
-                    print("Already replied to /u/", comment.author.name)
-                    comment = False
-                if(comment != False): #if we found our trigger
-                    #print("Found trigger")
-                    id_buffer += rf.bufferResponseID(str(parent))
-                failed = botAction(comment)
-                if(failed):
-                    print("Failed")
-                    errorString = "|URL: " + failed[0] + "|Body: " + "ERROR:" + failed[1]
-                    err_buffer += rf.bufferError(errorString)
-            #running = False
-        except KeyboardInterrupt:
-            running = False
-        # log all buffers
-        rf.logResponseID(REPLIED_TO_FILE, id_buffer)
-        rf.logError(LOG_FILE, err_buffer)
-runBot()
+                print(count,"/u/", comment.author, "Comment:", comment.body)
+                count += 1 #for debugging
+                if (comment.id not in responded_to_ids and trigger in comment.body.lower()):
+                    id_buffer += rf.bufferRespondedToID(comment.id)
+                    parent_comment = reddit.comment(id=comment.parent()).body
+                    urls = re.findall(REGEX_URL, parent_comment)
+                    responses = checkURLSafety(urls)
+                    if (urls != ""):
+                        reply = buildReply(responses)
+                        reply = head + reply + signature
+                        print("Printing Message:", reply)
+                        comment.reply(reply)
+                        time.sleep(2)
+        except praw.exceptions.APIException as e:
+            print("Rate limit exceeded")
+            err_buffer += rf.bufferError("Rate limit exceeded. Sleeping for 1 minute.")
+            time.sleep(60)
+        except TypeError:
+            print("TypeError found")
+        if (id_buffer != ""):
+            rf.logRespondedToID(RESPONDED_TO_FILE, id_buffer)
+        id_buffer = ""
+comments = reddit.subreddit("all").stream.comments()
+#comments = reddit.subreddit("pepperbotsuite").comments() #use this if you want the bot to run in certain subreddits only
+searchComments(comments)
